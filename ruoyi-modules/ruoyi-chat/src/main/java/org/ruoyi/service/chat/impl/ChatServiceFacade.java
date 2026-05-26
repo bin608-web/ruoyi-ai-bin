@@ -65,6 +65,7 @@ import org.ruoyi.service.vector.VectorStoreService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -227,47 +228,47 @@ public class ChatServiceFacade implements IChatService {
             .build();
 
         // Bing 搜索 MCP 客户端
-        McpTransport bingTransport = new StdioMcpTransport.Builder()
-            .command(List.of("C:\\Program Files\\nodejs\\npx.cmd", "-y", "bing-cn-mcp"))
-            .logEvents(true)
-            .build();
+//        McpTransport bingTransport = new StdioMcpTransport.Builder()
+//            .command(List.of("npx.cmd", "-y", "bing-cn-mcp"))
+//            .logEvents(true)
+//            .build();
 
         Long userId = chatRequest.getUserId();
-        McpClient bingMcpClient = new DefaultMcpClient.Builder()
-            .transport(bingTransport)
-            .listener(new MyMcpClientListener(userId))
-            .build();
+//        McpClient bingMcpClient = new DefaultMcpClient.Builder()
+//            .transport(bingTransport)
+//            .listener(new MyMcpClientListener(userId))
+//            .build();
 
         // Playwright MCP 客户端 - 浏览器自动化工具
-        McpTransport playwrightTransport = new StdioMcpTransport.Builder()
-            .command(List.of("C:\\Program Files\\nodejs\\npx.cmd", "-y", "@playwright/mcp@latest"))
-            .logEvents(true)
-            .build();
-
-        McpClient playwrightMcpClient = new DefaultMcpClient.Builder()
-            .transport(playwrightTransport)
-            .listener(new MyMcpClientListener(userId))
-            .build();
+//        McpTransport playwrightTransport = new StdioMcpTransport.Builder()
+//            .command(List.of("npx.cmd", "-y", "@playwright/mcp@latest"))
+//            .logEvents(true)
+//            .build();
+//
+//        McpClient playwrightMcpClient = new DefaultMcpClient.Builder()
+//            .transport(playwrightTransport)
+//            .listener(new MyMcpClientListener(userId))
+//            .build();
 
         // Filesystem MCP 客户端 - 文件管理工具
         // 允许 AI 读取、写入、搜索文件（基于当前项目根目录）
         String userDir = System.getProperty("user.dir");
         McpTransport filesystemTransport = new StdioMcpTransport.Builder()
-            .command(List.of("C:\\Program Files\\nodejs\\npx.cmd", "-y",
+            .command(List.of("npx.cmd", "-y",
                 "@modelcontextprotocol/server-filesystem", userDir))
             .logEvents(true)
-
             .build();
 
         McpClient filesystemMcpClient = new DefaultMcpClient.Builder()
             .transport(filesystemTransport)
             .listener(new MyMcpClientListener(userId))
+            .initializationTimeout(Duration.ofSeconds(120))
             .build();
 
         // 合并三个 MCP 客户端的工具
         ToolProvider toolProvider = McpToolProvider.builder()
             // bingMcpClient,
-            .mcpClients(List.of(playwrightMcpClient, filesystemMcpClient))
+            .mcpClients(List.of(filesystemMcpClient)) //playwrightMcpClient
             .build();
 
         // ========== LangChain4j Skills 基本用法 ==========
@@ -319,10 +320,10 @@ public class ChatServiceFacade implements IChatService {
         // 构建监督者 Agent - 管理多个子 Agent
         SupervisorAgent supervisor = AgenticServices.supervisorBuilder()
             .chatModel(plannerModel)
-            //.listener(new SupervisorStreamListener(null))
+            .listener(new SupervisorStreamListener(null))
             .subAgents(skillsAgent,searchAgent, sqlAgent, chartGenerationAgent, echartsAgent)
             // 加入历史上下文 - 使用 ChatMemoryProvider 提供持久化的聊天内存
-            //.chatMemoryProvider(memoryId -> createChatMemory(chatRequest.getSessionId()))
+//            .chatMemoryProvider(memoryId -> createChatMemory(chatRequest.getSessionId()))
             .responseStrategy(SupervisorResponseStrategy.LAST)
             .build();
 
@@ -332,7 +333,7 @@ public class ChatServiceFacade implements IChatService {
         CompletableFuture.runAsync(() -> {
             try {
                 String result = supervisor.invoke(chatRequest.getContent());
-                SseMessageUtils.sendContent(userId, result);
+                SseMessageUtils.sendReasoning(userId, result);
                 SseMessageUtils.sendDone(userId);
             } catch (Exception e) {
                 log.error("Supervisor 执行失败", e);

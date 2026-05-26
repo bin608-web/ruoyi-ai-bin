@@ -27,7 +27,7 @@ public class ChatServiceFactory implements ApplicationContextAware {
         Map<String, AbstractChatService> serviceMap = applicationContext.getBeansOfType(AbstractChatService.class);
         for (AbstractChatService service : serviceMap.values()) {
             if (service != null ) {
-                chatServiceMap.put(service.getProviderName(), service);
+                chatServiceMap.put(service. getProviderName(), service);
             }
         }
     }
