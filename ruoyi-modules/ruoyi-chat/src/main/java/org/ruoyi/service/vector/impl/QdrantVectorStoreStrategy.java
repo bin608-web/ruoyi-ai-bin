@@ -122,7 +122,7 @@ public class QdrantVectorStoreStrategy extends AbstractVectorStoreStrategy {
         String kid = storeEmbeddingBo.getKid();
         String docId = storeEmbeddingBo.getDocId();
         String collectionName = vectorStoreProperties.getQdrant().getCollectionname() + kid;
-        createSchema( vectorStoreProperties.getQdrant().getCollectionname() , kid);
+        createSchema( kid, storeEmbeddingBo.getEmbeddingModelName());
         EmbeddingStore<TextSegment> embeddingStore = getQdrantStore(collectionName);
 
         log.info("Qdrant向量存储条数记录: {}", chunkList.size());
