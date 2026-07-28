@@ -88,11 +88,24 @@ public interface IChatMessageService {
     /**
      * 保存聊天消息
      *
-     * @param userId    用户ID
-     * @param sessionId 会话ID
-     * @param content   消息内容
-     * @param role      角色类型
-     * @param modelName 模型名称
+     * @param userId        用户ID
+     * @param sessionId     会话ID
+     * @param content       消息内容
+     * @param role          角色类型
+     * @param modelName     模型名称
      */
     void saveChatMessage(Long userId, Long sessionId, String content, String role, String modelName);
+
+    /**
+     * 保存聊天消息（带思考步骤）
+     *
+     * @param userId         用户ID
+     * @param sessionId      会话ID
+     * @param content        消息内容
+     * @param role           角色类型
+     * @param modelName      模型名称
+     * @param thinkingSteps  思考步骤（JSON）
+     */
+    void saveChatMessage(Long userId, Long sessionId, String content, String role,
+                        String modelName, String thinkingSteps);
 }

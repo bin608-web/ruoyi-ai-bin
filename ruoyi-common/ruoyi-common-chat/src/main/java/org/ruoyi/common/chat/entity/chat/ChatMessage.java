@@ -44,6 +44,12 @@ public class ChatMessage extends TenantEntity {
     private String content;
 
     /**
+     * ReAct 思考步骤（JSON 格式）
+     * 存储 Thought → Action → Observation 循环过程
+     */
+    private String thinkingSteps;
+
+    /**
      * 对话角色
      */
     private String role;

@@ -14,8 +14,11 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ruoyi.domain.entity.mcp.McpTool;
+import org.ruoyi.domain.entity.mcp.UserMcpConfig;
 import org.ruoyi.enums.McpToolStatus;
 import org.ruoyi.mapper.mcp.McpToolMapper;
+import org.ruoyi.mapper.mcp.UserMcpConfigMapper;
+import org.ruoyi.service.mcp.IUserMcpConfigService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,6 +47,8 @@ public class LangChain4jMcpToolProviderService {
     private static final long DISABLE_DURATION = 5 * 60 * 1000;
     private final McpToolMapper mcpToolMapper;
     private final ObjectMapper objectMapper;
+    private final UserMcpConfigMapper userMcpConfigMapper;
+    private final IUserMcpConfigService userMcpConfigService;
     /**
      * 缓存活跃的 MCP Client
      */
@@ -69,7 +74,7 @@ public class LangChain4jMcpToolProviderService {
      */
     public ToolProvider getToolProvider(List<Long> toolIds) {
         if (toolIds == null || toolIds.isEmpty()) {
-            return McpToolProvider.builder().build();
+            return emptyProvider();
         }
 
         List<McpClient> clients = new ArrayList<>();
@@ -85,7 +90,7 @@ public class LangChain4jMcpToolProviderService {
         }
 
         if (clients.isEmpty()) {
-            return McpToolProvider.builder().build();
+            return emptyProvider();
         }
 
         return McpToolProvider.builder()
@@ -94,7 +99,7 @@ public class LangChain4jMcpToolProviderService {
     }
 
     /**
-     * 获取所有启用的 MCP 工具的 ToolProvider
+     * 获取所有已启用的 MCP 工具的 ToolProvider
      *
      * @return ToolProvider 实例
      */
@@ -105,7 +110,7 @@ public class LangChain4jMcpToolProviderService {
         );
 
         if (enabledTools.isEmpty()) {
-            return McpToolProvider.builder().build();
+            return emptyProvider();
         }
 
         List<Long> toolIds = enabledTools.stream()
@@ -116,14 +121,98 @@ public class LangChain4jMcpToolProviderService {
     }
 
     /**
-     * 获取指定名称的 MCP 工具的 ToolProvider
+     * 根据用户 ID 获取用户配置的 MCP 工具的 ToolProvider
+     * 用户配置会覆盖工具的默认配置
      *
+     * @param userId 用户 ID
+     * @return ToolProvider 实例
+     */
+    public ToolProvider getUserEnabledToolsProvider(Long userId) {
+        if (userId == null) {
+            return getAllEnabledToolsProvider();
+        }
+
+        // 获取用户启用的配置
+        List<org.ruoyi.domain.vo.mcp.UserMcpConfigVo> userConfigs =
+            userMcpConfigMapper.selectEnabledByUserId(userId);
+
+        if (userConfigs == null || userConfigs.isEmpty()) {
+            // 用户没有配置，返回所有启用工具
+            return getAllEnabledToolsProvider();
+        }
+
+        List<McpClient> clients = new ArrayList<>();
+        for (org.ruoyi.domain.vo.mcp.UserMcpConfigVo config : userConfigs) {
+            try {
+                McpClient client = getUserMcpClient(userId, config);
+                if (client != null) {
+                    clients.add(client);
+                }
+            } catch (Exception e) {
+                log.error("Failed to create MCP client for user {} tool {}: {}",
+                    userId, config.getToolId(), e.getMessage());
+            }
+        }
+
+        if (clients.isEmpty()) {
+            return emptyProvider();
+        }
+
+        return McpToolProvider.builder()
+            .mcpClients(clients)
+            .build();
+    }
+
+    /**
+     * 根据用户 ID 和指定的 MCP 配置 ID 列表获取 ToolProvider
+     *
+     * @param userId 用户 ID
+     * @param mcpConfigIds MCP 配置 ID 列表
+     * @return ToolProvider 实例
+     */
+    public ToolProvider getUserEnabledToolsProvider(Long userId, List<Long> mcpConfigIds) {
+        if (userId == null || mcpConfigIds == null || mcpConfigIds.isEmpty()) {
+            return getUserEnabledToolsProvider(userId);
+        }
+
+        // 获取用户指定的 MCP 配置
+        List<org.ruoyi.domain.vo.mcp.UserMcpConfigVo> userConfigs =
+            userMcpConfigMapper.selectByIdsAndUserId(userId, mcpConfigIds);
+
+        if (userConfigs == null || userConfigs.isEmpty()) {
+            // 如果没有找到配置，返回空 provider
+            return emptyProvider();
+        }
+
+        List<McpClient> clients = new ArrayList<>();
+        for (org.ruoyi.domain.vo.mcp.UserMcpConfigVo config : userConfigs) {
+            try {
+                McpClient client = getUserMcpClient(userId, config);
+                if (client != null) {
+                    clients.add(client);
+                }
+            } catch (Exception e) {
+                log.error("Failed to create MCP client for user {} config {}: {}",
+                    userId, config.getId(), e.getMessage());
+            }
+        }
+
+        if (clients.isEmpty()) {
+            return emptyProvider();
+        }
+
+        return McpToolProvider.builder()
+            .mcpClients(clients)
+            .build();
+    }
+
+     /*
      * @param toolNames 工具名称列表
      * @return ToolProvider 实例
      */
     public ToolProvider getToolProviderByNames(List<String> toolNames) {
         if (toolNames == null || toolNames.isEmpty()) {
-            return McpToolProvider.builder().build();
+            return emptyProvider();
         }
 
         List<McpTool> tools = mcpToolMapper.selectList(
@@ -133,7 +222,7 @@ public class LangChain4jMcpToolProviderService {
         );
 
         if (tools.isEmpty()) {
-            return McpToolProvider.builder().build();
+            return emptyProvider();
         }
 
         List<Long> toolIds = tools.stream()
@@ -285,6 +374,41 @@ public class LangChain4jMcpToolProviderService {
             statusMap.put(tool.getId(), isHealthy);
         }
         return statusMap;
+    }
+
+    /**
+     * 根据用户配置创建 MCP Client
+     * 用户配置会覆盖工具的默认配置
+     */
+    private McpClient getUserMcpClient(Long userId, org.ruoyi.domain.vo.mcp.UserMcpConfigVo userConfig) throws Exception {
+        Long toolId = userConfig.getToolId();
+        McpTool tool = mcpToolMapper.selectById(toolId);
+
+        if (tool == null || !McpToolStatus.isEnabled(tool.getStatus())) {
+            log.warn("Tool {} is not available for user {}", toolId, userId);
+            return null;
+        }
+
+        // 跳过内置工具
+        if ("BUILTIN".equals(tool.getType())) {
+            log.debug("Skipping builtin tool: {} for user {}", tool.getName(), userId);
+            return null;
+        }
+
+        // 优先使用用户配置，如果没有则使用工具默认配置
+        String configJson = userConfig.getConfigJson();
+        if (configJson == null || configJson.isBlank()) {
+            configJson = tool.getConfigJson();
+        }
+
+        // 创建临时工具对象，使用用户配置
+        McpTool userTool = new McpTool();
+        userTool.setId(tool.getId());
+        userTool.setName(tool.getName());
+        userTool.setType(tool.getType());
+        userTool.setConfigJson(configJson);
+
+        return createMcpClient(userTool);
     }
 
     /**
@@ -470,5 +594,12 @@ public class LangChain4jMcpToolProviderService {
      */
     public int getActiveClientCount() {
         return activeClients.size();
+    }
+
+    /**
+     * 创建空的 ToolProvider（避免 McpToolProvider.builder().build() 的 NPE）
+     */
+    private static ToolProvider emptyProvider() {
+        return McpToolProvider.builder().mcpClients(java.util.Collections.emptyList()).build();
     }
 }

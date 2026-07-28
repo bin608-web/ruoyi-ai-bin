@@ -196,6 +196,15 @@ public class ChatMessageServiceImpl implements IChatMessageService {
      */
     @Override
     public void saveChatMessage(Long userId, Long sessionId, String content, String role, String modelName) {
+        saveChatMessage(userId, sessionId, content, role, modelName, null);
+    }
+
+    /**
+     * 保存聊天消息（带思考步骤）
+     */
+    @Override
+    public void saveChatMessage(Long userId, Long sessionId, String content, String role,
+                                 String modelName, String thinkingSteps) {
         try {
             if (userId == null) {
                 log.warn("缺少用户ID，无法保存消息");
@@ -208,9 +217,13 @@ public class ChatMessageServiceImpl implements IChatMessageService {
             messageBo.setContent(content);
             messageBo.setRole(role);
             messageBo.setModelName(modelName);
+            if (thinkingSteps != null) {
+                messageBo.setThinkingSteps(thinkingSteps);
+            }
 
             insertByBo(messageBo);
-            log.debug("保存聊天消息成功，角色: {}, 会话: {}", role, sessionId);
+            log.debug("保存聊天消息成功，角色: {}, 会话: {}, 思考步骤: {}",
+                role, sessionId, thinkingSteps != null ? "有" : "无");
         } catch (Exception e) {
             log.error("保存聊天消息时出错: {}", e.getMessage(), e);
         }

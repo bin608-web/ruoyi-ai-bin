@@ -104,4 +104,14 @@ public class ChatRequest {
      */
     private List<ChatMessage> contextMessages;
 
+    /**
+     * MCP 配置 ID 列表
+     */
+    private List<Long> mcpConfigIds;
+
+    /**
+     * Skills ID 列表
+     */
+    private List<String> skillIds;
+
 }

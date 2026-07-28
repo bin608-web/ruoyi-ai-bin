@@ -144,7 +144,7 @@ public class QdrantVectorStoreStrategy extends AbstractVectorStoreStrategy {
         });
 
         long endTime = System.currentTimeMillis();
-        log.info("Qdrant向量存储完成消耗时间：{}秒", (endTime - startTime) / 1000);
+        log.info("Qdrant向量存储完成消耗时间：{}毫秒", (endTime - startTime) );
     }
 
     @Override

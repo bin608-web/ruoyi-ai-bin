@@ -57,6 +57,7 @@ public class SysUserImportListener extends AnalysisEventListener<SysUserImportVo
     public void invoke(SysUserImportVo userVo, AnalysisContext context) {
         SysUserVo sysUser = this.userService.selectUserByUserName(userVo.getUserName());
         try {
+
             // 验证是否存在这个用户
             if (ObjectUtil.isNull(sysUser)) {
                 SysUserBo user = BeanUtil.toBean(userVo, SysUserBo.class);

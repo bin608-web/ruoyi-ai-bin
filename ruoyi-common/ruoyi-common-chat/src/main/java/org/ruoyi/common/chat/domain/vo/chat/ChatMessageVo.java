@@ -49,6 +49,11 @@ public class ChatMessageVo implements Serializable {
     private String content;
 
     /**
+     * ReAct 思考步骤（JSON 格式）
+     */
+    private String thinkingSteps;
+
+    /**
      * 对话角色
      */
     @ExcelProperty(value = "对话角色")
