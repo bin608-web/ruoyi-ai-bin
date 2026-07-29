@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ruoyi.mapper.mcp.UserMcpConfigMapper">
+
+    <!-- 通用查询结果映射 -->
+    <resultMap id="BaseResultMap" type="org.ruoyi.domain.vo.mcp.UserMcpConfigVo">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="tool_id" property="toolId"/>
+        <result column="tool_name" property="toolName"/>
+        <result column="config_name" property="configName"/>
+        <result column="description" property="description"/>
+        <result column="config_json" property="configJson"/>
+        <result column="status" property="status"/>
+        <result column="priority" property="priority"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 通用查询列 -->
+    <sql id="Base_Column_List">
+        id, user_id, tool_id, tool_name, config_name, description, config_json, status, priority, create_time, update_time
+    </sql>
+
+    <!-- 根据用户 ID 查询启用的配置列表 -->
+    <select id="selectEnabledByUserId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM user_mcp_config
+        WHERE user_id = #{userId}
+          AND status = 'ENABLED'
+        ORDER BY priority ASC
+    </select>
+
+    <!-- 根据用户 ID 和工具 ID 查询配置 -->
+    <select id="selectByUserIdAndToolId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM user_mcp_config
+        WHERE user_id = #{userId}
+          AND tool_id = #{toolId}
+    </select>
+
+    <!-- 根据用户 ID 和配置 ID 列表查询启用的配置 -->
+    <select id="selectByIdsAndUserId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM user_mcp_config
+        WHERE user_id = #{userId}
+          AND status = 'ENABLED'
+          <if test="configIds != null and configIds.size() > 0">
+              AND id IN
+              <foreach collection="configIds" item="id" open="(" separator="," close=")">
+                  #{id}
+              </foreach>
+          </if>
+        ORDER BY priority ASC
+    </select>
+
+    <!-- 删除用户的配置 -->
+    <delete id="deleteByUserId">
+        DELETE FROM user_mcp_config
+        WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 根据工具 ID 删除配置 -->
+    <delete id="deleteByToolId">
+        DELETE FROM user_mcp_config
+        WHERE tool_id = #{toolId}
+    </delete>
+
+</mapper>

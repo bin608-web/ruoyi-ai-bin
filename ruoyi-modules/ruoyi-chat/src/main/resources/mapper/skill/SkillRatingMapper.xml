@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.ruoyi.mapper.skill.SkillRatingMapper">
+
+    <resultMap id="BaseResultMap" type="org.ruoyi.domain.entity.skill.SkillRating">
+        <id column="id" property="id"/>
+        <result column="skill_id" property="skillId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="rating" property="rating"/>
+        <result column="comment" property="comment"/>
+        <result column="create_time" property="createTime"/>
+        <result column="tenant_id" property="tenantId"/>
+    </resultMap>
+
+    <select id="selectAverageRating" resultType="java.lang.Double">
+        SELECT COALESCE(AVG(rating), 0.0) FROM skill_rating
+        WHERE skill_id = #{skillId}
+    </select>
+
+    <select id="selectRatingCount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM skill_rating
+        WHERE skill_id = #{skillId}
+    </select>
+
+</mapper>
