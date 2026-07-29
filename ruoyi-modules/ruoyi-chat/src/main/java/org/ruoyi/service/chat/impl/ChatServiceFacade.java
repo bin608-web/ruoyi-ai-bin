@@ -1290,6 +1290,8 @@ public class ChatServiceFacade implements IChatService {
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
+            pb.environment().put("PYTHONIOENCODING", "utf-8");
+            pb.environment().put("PYTHONUTF8", "1");
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);;
             p.waitFor(120, java.util.concurrent.TimeUnit.SECONDS);
@@ -1311,7 +1313,15 @@ public class ChatServiceFacade implements IChatService {
 
             ProcessBuilder pb = new ProcessBuilder("cmd", "/c", cmd);
             pb.redirectErrorStream(true);
-            Process p = pb.start();
+            // 设置控制台代码页为 UTF-8 (chcp 65001)，避免中文乱码
+            Map<String, String> env = pb.environment();
+            env.put("PYTHONIOENCODING", "utf-8");
+            env.put("PYTHONUTF8", "1");
+            // 在命令前加 chcp 65001 切换控制台编码，确保 cmd.exe 输出中文不乱码
+            ProcessBuilder wrappedPb = new ProcessBuilder("cmd", "/c", "chcp 65001 >nul && " + cmd);
+            wrappedPb.redirectErrorStream(true);
+            wrappedPb.environment().putAll(env);
+            Process p = wrappedPb.start();
             String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             p.waitFor(120, java.util.concurrent.TimeUnit.SECONDS);
             return output;
@@ -1358,6 +1368,8 @@ public class ChatServiceFacade implements IChatService {
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
+            pb.environment().put("PYTHONIOENCODING", "utf-8");
+            pb.environment().put("PYTHONUTF8", "1");
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             p.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);

@@ -1173,6 +1173,9 @@ public class UserSkillServiceImpl implements IUserSkillService {
 
         ProcessBuilder processBuilder = new ProcessBuilder(cmd);
         processBuilder.redirectErrorStream(true);
+        // Windows 下强制子进程使用 UTF-8 输出，避免中文乱码
+        processBuilder.environment().put("PYTHONIOENCODING", "utf-8");
+        processBuilder.environment().put("PYTHONUTF8", "1");
         log.info("执行技能脚本: {}", String.join(" ", cmd));
         Process process = processBuilder.start();
 
