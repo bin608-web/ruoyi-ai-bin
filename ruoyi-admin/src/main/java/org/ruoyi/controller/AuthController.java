@@ -102,7 +102,7 @@ public class AuthController {
         Long userId = LoginHelper.getUserId();
         scheduledExecutorService.schedule(() -> {
             SseMessageDto dto = new SseMessageDto();
-            dto.setMessage("欢迎登录ruoyi-ai后台管理系统");
+            dto.setMessage("欢迎登录caobin-ai后台管理系统");
             dto.setUserIds(List.of(userId));
             SseMessageUtils.publishMessage(dto);
         }, 5, TimeUnit.SECONDS);

@@ -117,7 +117,7 @@ redisson:
   # 单节点配置
   singleServerConfig:
     # 客户端名称 不能用中文
-    clientName: ruoyi-ai
+    clientName: caobin-ai
     # 最小空闲连接数
     connectionMinimumIdleSize: 8
     # 连接池大小

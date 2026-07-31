@@ -865,15 +865,48 @@ public class ChatServiceFacade implements IChatService {
 //            messages.add(dev.langchain4j.data.message.UserMessage.from(chatRequest.getContent()));
 
             int maxRounds = 20;
-            ChatModel chatModel = chatService.buildChatModel(chatModelVo);
+            StreamingChatModel streamingModel = chatService.buildStreamingChatModel(chatModelVo, chatRequest);
 
             try {
                 for (int round = 0; round < maxRounds; round++) {
                     log.info("ReAct round {}", round + 1);
-                    // 同步调用模型获取完整响应
-                    dev.langchain4j.model.chat.response.ChatResponse response = chatModel.chat(messages);
-                    String aiText = response.aiMessage().text();
+
+                    // 流式调用：边推边缓冲，完整响应到达后解析 ReAct 标记
+                    StringBuilder roundBuffer = new StringBuilder();
+                    CompletableFuture<Boolean> roundDone = new CompletableFuture<>();
+
+                    streamingModel.chat(messages, new StreamingChatResponseHandler() {
+                        @Override
+                        public void onPartialResponse(String partialResponse) {
+                            roundBuffer.append(partialResponse);
+                            // 实时推送内容到前端
+                            SseMessageUtils.sendContent(userId, partialResponse);
+                        }
+
+                        @Override
+                        public void onCompleteResponse(dev.langchain4j.model.chat.response.ChatResponse completeResponse) {
+                            roundDone.complete(true);
+                        }
+
+                        @Override
+                        public void onError(Throwable error) {
+                            log.error("流式响应出错: {}", error.getMessage());
+                            roundDone.completeExceptionally(error);
+                        }
+                    });
+
+                    // 等待本轮流式响应完成
+                    String aiText;
+                    try {
+                        roundDone.get(180, TimeUnit.SECONDS);
+                        aiText = roundBuffer.toString();
+                    } catch (Exception e) {
+                        log.error("ReAct 等待响应超时或出错: {}", e.getMessage());
+                        break;
+                    }
+
                     messages.add(dev.langchain4j.data.message.AiMessage.from(aiText));
+                    fullContent.append(aiText).append("\n");
 
                     // 解析 Thought/Action/Action Input
                     String thought = extractTag(aiText, "Thought");
@@ -916,6 +949,7 @@ public class ChatServiceFacade implements IChatService {
                         // 只保存最后的结果。
                         saveChatMessageWithThinkingSteps(userId, chatRequest.getSessionId(),
                             aiText, RoleType.ASSISTANT.getName(), chatRequest.getModel(), thinkingSteps);
+                        SseMessageUtils.sendDone(userId);
                         break;
                     }
 
